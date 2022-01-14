@@ -58,9 +58,11 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
     /**
      * Creates complete schemas for the given entity metadatas.
      */
-    async build(): Promise<void> {
-        this.queryRunner = this.connection.createQueryRunner();
-
+    async build(queryRunner?: QueryRunner): Promise<void> {
+        if (queryRunner)
+            this.queryRunner = queryRunner;
+        else
+            this.queryRunner = this.connection.createQueryRunner();
         // this.connection.driver.database || this.currentDatabase;
         this.currentDatabase = this.connection.driver.database;
         this.currentSchema = this.connection.driver.schema;
@@ -69,7 +71,8 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
         // E.g. if you try to DROP column and ADD it again in the same transaction, crdb throws error.
         const isUsingTransactions = (
             !(this.connection.driver instanceof CockroachDriver) &&
-            this.connection.options.migrationsTransactionMode !== "none"
+            this.connection.options.migrationsTransactionMode !== "none" &&
+            !(queryRunner && queryRunner.isTransactionActive)
         );
 
         if (isUsingTransactions) {
@@ -104,7 +107,8 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
             throw error;
 
         } finally {
-            await this.queryRunner.release();
+            if (!queryRunner)
+                await this.queryRunner.release();
         }
     }
 
@@ -120,8 +124,11 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
     /**
      * Returns sql queries to be executed by schema builder.
      */
-    async log(): Promise<SqlInMemory> {
-        this.queryRunner = this.connection.createQueryRunner();
+    async log(queryRunner?: QueryRunner): Promise<SqlInMemory> {
+        if (queryRunner)
+            this.queryRunner = queryRunner;
+        else
+            this.queryRunner = this.connection.createQueryRunner();
         try {
             // Flush the queryrunner table & view cache
             const tablePaths = this.entityToSyncMetadatas.map(metadata => this.getTablePath(metadata));
@@ -142,7 +149,8 @@ export class RdbmsSchemaBuilder implements SchemaBuilder {
             // because there exist drivers which reuse same query runner. Also its important to disable
             // sql memory after call of getMemorySql() method because last one flushes sql memory.
             this.queryRunner.disableSqlMemory();
-            await this.queryRunner.release();
+            if (!queryRunner)
+                await this.queryRunner.release();
         }
     }
 
