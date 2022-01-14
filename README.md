@@ -1,3 +1,9 @@
+# @varanauskas/typeorm
+Opinionated TypeORM fork with these patches:
+
+- [fix: allow clearing database inside a transaction](https://github.com/typeorm/typeorm/pull/8529)
+- [feat: rename typeorm_metadata table](https://github.com/typeorm/typeorm/pull/8528)
+
 <div align="center">
   <a href="http://typeorm.io/">
     <img src="https://github.com/typeorm/typeorm/raw/master/resources/logo_big.png" width="492" height="228">
