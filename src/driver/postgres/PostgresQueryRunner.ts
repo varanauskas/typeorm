@@ -1559,8 +1559,8 @@ export class PostgresQueryRunner extends BaseQueryRunner implements QueryRunner 
             return name === "current_schema()" ? name : "'" + name + "'";
         }).join(", ");
 
-        const anotherTransactionRunning = this.isTransactionActive;
-        if (!anotherTransactionRunning)
+        const isAnotherTransactionActive = this.isTransactionActive;
+        if (!isAnotherTransactionActive)
             await this.startTransaction();
         try {
             const version = await this.getVersion()
@@ -1590,12 +1590,12 @@ export class PostgresQueryRunner extends BaseQueryRunner implements QueryRunner 
             // drop enum types
             await this.dropEnumTypes(schemaNamesString);
 
-            if (!anotherTransactionRunning)
+            if (!isAnotherTransactionActive)
                 await this.commitTransaction();
 
         } catch (error) {
             try { // we throw original error even if rollback thrown an error
-                if (!anotherTransactionRunning)
+                if (!isAnotherTransactionActive)
                     await this.rollbackTransaction();
             } catch (rollbackError) { }
             throw error;

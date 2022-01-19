@@ -729,7 +729,10 @@ export abstract class AbstractSqliteQueryRunner extends BaseQueryRunner implemen
      */
     async clearDatabase(): Promise<void> {
         await this.query(`PRAGMA foreign_keys = OFF;`);
-        await this.startTransaction();
+        
+        const isAnotherTransactionActive = this.isTransactionActive;
+        if (!isAnotherTransactionActive)
+            await this.startTransaction();
         try {
             const selectViewDropsQuery = `SELECT 'DROP VIEW "' || name || '";' as query FROM "sqlite_master" WHERE "type" = 'view'`;
             const dropViewQueries: ObjectLiteral[] = await this.query(selectViewDropsQuery);
@@ -738,11 +741,13 @@ export abstract class AbstractSqliteQueryRunner extends BaseQueryRunner implemen
             const selectTableDropsQuery = `SELECT 'DROP TABLE "' || name || '";' as query FROM "sqlite_master" WHERE "type" = 'table' AND "name" != 'sqlite_sequence'`;
             const dropTableQueries: ObjectLiteral[] = await this.query(selectTableDropsQuery);
             await Promise.all(dropTableQueries.map(q => this.query(q["query"])));
-            await this.commitTransaction();
-
+            
+            if (!isAnotherTransactionActive)
+                await this.commitTransaction();
         } catch (error) {
             try { // we throw original error even if rollback thrown an error
-                await this.rollbackTransaction();
+                if (!isAnotherTransactionActive)
+                    await this.rollbackTransaction();
             } catch (rollbackError) { }
             throw error;
 
